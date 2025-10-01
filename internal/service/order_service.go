@@ -53,9 +53,15 @@ func (p *RabbitMQPublisher) PublishOrderCreated(productId string, quantity int) 
 		return fmt.Errorf("failed to declare a queue: %w", err)
 	}
 
-	event := map[string]interface{}{
+	data := map[string]interface{}{
 		"productId": productId,
 		"quantity":  quantity,
+	}
+
+	// Bungkus dalam format yang diharapkan NestJS
+	event := map[string]interface{}{
+		"pattern": "order.created", // Cocokkan dengan @EventPattern di NestJS
+		"data":    data,
 	}
 	body, err := json.Marshal(event)
 	if err != nil {

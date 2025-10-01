@@ -32,7 +32,6 @@ func main() {
 	}
 	db.AutoMigrate(&repository.Order{})
 
-	// --- Redis Connection ---
 	redisAddr := fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT"))
 	rdb := redis.NewClient(&redis.Options{
 		Addr: redisAddr,
@@ -41,7 +40,6 @@ func main() {
 		log.Fatalf("Failed to connect to Redis: %v", err)
 	}
 
-	// --- RabbitMQ Connection ---
 	rabbitURL := os.Getenv("RABBITMQ_URL")
 	conn, err := amqp.Dial(rabbitURL)
 	if err != nil {
@@ -55,7 +53,6 @@ func main() {
 	}
 	defer ch.Close()
 
-	// --- Dependency Injection ---
 	productServiceURL := os.Getenv("PRODUCT_SERVICE_URL")
 	repo := repository.NewOrderRepository(db)
 	cache := repository.NewOrderCache(rdb)
@@ -63,7 +60,6 @@ func main() {
 	orderService := service.NewOrderService(repo, cache, publisher, productServiceURL)
 	orderHandler := handler.NewOrderHandler(orderService)
 
-	// --- HTTP Server Setup ---
 	router := gin.Default()
 	router.POST("/orders", orderHandler.CreateOrder)
 	router.GET("/orders/product/:productId", orderHandler.GetOrdersByProductID)

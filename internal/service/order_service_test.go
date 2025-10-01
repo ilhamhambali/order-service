@@ -8,18 +8,15 @@ import (
 	"testing"
 )
 
-// Mock OrderRepository (memenuhi IOrderRepository)
 type mockOrderRepository struct{}
 func (m *mockOrderRepository) Create(order *repository.Order) error { return nil }
 func (m *mockOrderRepository) GetByProductID(productID string) ([]repository.Order, error) { return nil, nil }
 
-// Mock OrderCache (memenuhi IOrderCache)
 type mockOrderCache struct{}
 func (m *mockOrderCache) Get(key string) ([]repository.Order, error) { return nil, nil }
 func (m *mockOrderCache) Set(key string, orders []repository.Order) error { return nil }
 func (m *mockOrderCache) GetCacheKeyForProduct(productID string) string { return "key" }
 
-// Mock Publisher (memenuhi IPublisher)
 type mockPublisher struct{
 	shouldFail bool
 }
@@ -31,7 +28,6 @@ func (m *mockPublisher) PublishOrderCreated(productId string, quantity int) erro
 }
 
 func TestCreateOrder(t *testing.T) {
-	// ... server httptest tetap sama ...
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/products/valid-product" {
 			w.WriteHeader(http.StatusOK)
@@ -46,7 +42,6 @@ func TestCreateOrder(t *testing.T) {
 	defer server.Close()
 
 
-	// Setup service with mocks
 	service := NewOrderService(
 		&mockOrderRepository{},
 		&mockOrderCache{},
@@ -54,7 +49,6 @@ func TestCreateOrder(t *testing.T) {
 		server.URL,
 	)
 
-	// Test Case 1: Successful order creation
 	t.Run("successful order creation", func(t *testing.T) {
 		req := CreateOrderRequest{ProductID: "valid-product", Quantity: 5}
 		order, err := service.CreateOrder(req)
@@ -70,7 +64,6 @@ func TestCreateOrder(t *testing.T) {
 		}
 	})
 
-	// Test Case 2: Insufficient stock
 	t.Run("insufficient stock", func(t *testing.T) {
 		req := CreateOrderRequest{ProductID: "no-stock", Quantity: 5}
 		_, err := service.CreateOrder(req)

@@ -32,7 +32,7 @@ func NewOrderCache(client *redis.Client) *OrderCache {
 func (c *OrderCache) Get(key string) ([]Order, error) {
 	val, err := c.client.Get(c.ctx, key).Result()
 	if err == redis.Nil {
-		return nil, nil // Cache miss
+		return nil, nil 
 	} else if err != nil {
 		return nil, err
 	}
