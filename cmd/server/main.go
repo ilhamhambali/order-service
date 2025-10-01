@@ -18,7 +18,6 @@ import (
 )
 
 func main() {
-	// --- Database Connection ---
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
 		os.Getenv("DATABASE_HOST"),
 		os.Getenv("DATABASE_USER"),

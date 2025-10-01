@@ -42,12 +42,12 @@ func NewRabbitMQPublisher(ch *amqp.Channel) *RabbitMQPublisher {
 
 func (p *RabbitMQPublisher) PublishOrderCreated(productId string, quantity int) error {
 	q, err := p.channel.QueueDeclare(
-		"order.created", // name
-		false,           // durable
-		false,           // delete when unused
-		false,           // exclusive
-		false,           // no-wait
-		nil,             // arguments
+		"order.created", 
+		false,           
+		false,          
+		false,        
+		false,       
+		nil,            
 	)
 	if err != nil {
 		return fmt.Errorf("failed to declare a queue: %w", err)
@@ -58,9 +58,9 @@ func (p *RabbitMQPublisher) PublishOrderCreated(productId string, quantity int) 
 		"quantity":  quantity,
 	}
 
-	// Bungkus dalam format yang diharapkan NestJS
+
 	event := map[string]interface{}{
-		"pattern": "order.created", // Cocokkan dengan @EventPattern di NestJS
+		"pattern": "order.created", 
 		"data":    data,
 	}
 	body, err := json.Marshal(event)
@@ -69,21 +69,20 @@ func (p *RabbitMQPublisher) PublishOrderCreated(productId string, quantity int) 
 	}
 
 	return p.channel.Publish(
-		"",     // exchange
-		q.Name, // routing key
-		false,  // mandatory
-		false,  // immediate
+		"",   
+		q.Name, 
+		false,  
 		amqp.Publishing{
 			ContentType: "application/json",
 			Body:        body,
 		})
 }
 
-// OrderService contains the business logic
+
 type OrderService struct {
-	repo              repository.IOrderRepository // Ganti dari *repository.OrderRepository
-	cache             repository.IOrderCache      // Ganti dari *repository.OrderCache
-	publisher         IPublisher                  // Ganti dari *RabbitMQPublisher
+	repo              repository.IOrderRepository 
+	cache             repository.IOrderCache      
+	publisher         IPublisher                  
 	productServiceURL string
 }
 
@@ -96,7 +95,7 @@ func NewOrderService(repo repository.IOrderRepository, cache repository.IOrderCa
 	}
 }
 
-// fetchProductInfo makes a synchronous HTTP call to the product-service
+
 func (s *OrderService) fetchProductInfo(productID string) (*ProductResponse, error) {
 	url := fmt.Sprintf("%s/products/%s", s.productServiceURL, productID)
 	resp, err := http.Get(url)
@@ -117,19 +116,18 @@ func (s *OrderService) fetchProductInfo(productID string) (*ProductResponse, err
 }
 
 func (s *OrderService) CreateOrder(req CreateOrderRequest) (*repository.Order, error) {
-	// 1. Fetch product info from product-service
+
 	product, err := s.fetchProductInfo(req.ProductID)
 	if err != nil {
 		log.Printf("Error fetching product %s: %v", req.ProductID, err)
 		return nil, errors.New("product not found or service unavailable")
 	}
 
-	// 2. Validate stock
+
 	if product.Qty < req.Quantity {
 		return nil, errors.New("insufficient stock")
 	}
 
-	// 3. Create and save order
 	order := &repository.Order{
 		ID:         uuid.New().String(),
 		ProductID:  req.ProductID,
@@ -143,9 +141,8 @@ func (s *OrderService) CreateOrder(req CreateOrderRequest) (*repository.Order, e
 		return nil, err
 	}
 
-	// 4. Publish event
+
 	if err := s.publisher.PublishOrderCreated(order.ProductID, order.Quantity); err != nil {
-		// In a real system, you'd handle this failure (e.g., retry, log to a dead-letter queue)
 		log.Printf("Failed to publish order.created event: %v", err)
 	} else {
 		log.Printf("Published order.created event for product %s", order.ProductID)
@@ -157,26 +154,23 @@ func (s *OrderService) CreateOrder(req CreateOrderRequest) (*repository.Order, e
 func (s *OrderService) GetOrdersByProductID(productID string) ([]repository.Order, error) {
 	cacheKey := s.cache.GetCacheKeyForProduct(productID)
 
-	// Check cache first
+
 	cachedOrders, err := s.cache.Get(cacheKey)
 	if err != nil {
-		log.Printf("Redis error on get: %v", err) // Log error but proceed to DB
-	}
+		log.Printf("Redis error on get: %v", err) 
 	if cachedOrders != nil {
 		log.Println("Returning cached orders")
 		return cachedOrders, nil
 	}
 
-	// If cache miss, get from DB
 	log.Println("Fetching orders from DB")
 	orders, err := s.repo.GetByProductID(productID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Save to cache
 	if err := s.cache.Set(cacheKey, orders); err != nil {
-		log.Printf("Redis error on set: %v", err) // Log error but don't fail the request
+		log.Printf("Redis error on set: %v", err)
 	}
 
 	return orders, nil
